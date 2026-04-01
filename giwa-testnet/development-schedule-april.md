@@ -5,7 +5,7 @@
 **팀**:
 
 - **BC** (K님): 스마트 컨트랙트 (Vault strategy 배포, Oracle/Swapper 설정). 대부분 기존 StrategyVelodromeGaugeV2 배포 스크립트 실행 수준 — 새 컨트랙트 작성 거의 없음. W2 집중, 이후 테스트/검증 위주.
-- **BE** (규현님): beefy-api 백엔드 (Giwa 체인 등록, vault 설정, APY 계산)
+- **BE** (교현님): beefy-api 백엔드 (Giwa 체인 등록, vault 설정, APY 계산)
 - **FE** (보석): Haetae 프론트엔드 (실제 체인 연동, 지갑 연결, beefy-api 연동, 트랜잭션 플로우)
 - **Tech PM** (보석): 전체 조율, 일정 관리
 
@@ -132,7 +132,7 @@
 3. Vault 배포 스크립트 작성 시작 (`scripts/vault/deploy-giwa-aerodrome.js`)
 4. 참고: `hardhat.config.ts`에 Giwa 네트워크 이미 설정됨
 
-## BE 담당자 (규현님) 즉시 시작 가능한 태스크
+## BE 담당자 (교현님) 즉시 시작 가능한 태스크
 
 1. `beefy-api` 로컬 실행 환경 세팅
 2. `yarn add:chain giwa 91342 https://sepolia-rpc.giwa.io https://sepolia-explorer.giwa.io/ ETH` 실행
