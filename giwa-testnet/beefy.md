@@ -25,8 +25,87 @@ Deployed: 2026-03 (prior to Aerodrome)
 | Call Fee | 0.05% |
 | Strategist Fee | 0.5% |
 
-## Next Steps
+## Aerodrome Vault 배포 (2026-04-13)
 
-- [ ] Deploy Beefy vault strategy for Aerodrome LP pools (StrategyVelodromeGaugeV2)
-- [ ] Register Aerodrome pools in BeefyOracle
-- [ ] Configure BeefySwapper with Aerodrome Router
+### Oracle 서브 컨트랙트 (신규 배포)
+
+| Contract | Address |
+|----------|---------|
+| FixedOracle | `0xd71A532E728b2307a8E54CBf313e1046918cb62D` |
+
+등록된 가격 (FixedOracle fallback — Aerodrome pool TWAP observations 부족):
+
+| Token | Price (18 decimals) | Note |
+|-------|---------------------|------|
+| USDC  | $1.0   | stable anchor |
+| DAI   | $1.0   | stable anchor |
+| WETH  | $3000  | testnet placeholder |
+| AERO  | $0.1   | testnet placeholder |
+
+BeefyOracle staleness = 21600s (6h).
+
+### Vault — WETH/USDC (Aerodrome volatile)
+
+| 항목 | 값 |
+|------|------|
+| Vault (proxy) | `0x0a4f250Fd76A51cE3fAF4Ca578A253429AE86082` |
+| Strategy | `0x2E0E4f013039DcaaD268032085643d079978531b` |
+| Want (LP) | `0x69208dba95aaFB30FBa6A5c2E2180c0FC86CE615` |
+| Gauge | `0x9Df510a82dd834094c6b08e32935e3A8C60dd3Fe` |
+| Name | Moo Aerodrome Giwa WETH-USDC |
+| Symbol | mooAerodromeGiwaWETH-USDC |
+| approvalDelay | 21600 (6h) |
+| lpToken0 / lpToken1 | WETH / USDC |
+| harvestOnDeposit | true |
+
+### Vault — DAI/USDC (Aerodrome stable)
+
+| 항목 | 값 |
+|------|------|
+| Vault (proxy) | `0x4259d1Ed2F59c157e690e1F451FDa42bbAF0496a` |
+| Strategy | `0xAa104671064bfd0b555b2F8aB2457f2a54e0005b` |
+| Want (LP) | `0x6ec763498F105E2E28B5cD6EF36f112a41753d36` |
+| Gauge | `0x0904B398FE1a3179c23a832474A616749D48aD32` |
+| Name | Moo Aerodrome Giwa sDAI-USDC |
+| Symbol | mooAerodromeGiwasDAI-USDC |
+| approvalDelay | 21600 (6h) |
+| lpToken0 / lpToken1 | USDC / DAI |
+| harvestOnDeposit | true |
+
+Vault 2개 모두 `owner = Vault Timelock (0x0F3A…1BD0)`. Strategy는 `owner = deployer` 유지 (테스트넷 빠른 튜닝 목적, PROD 전환 시 StratTimelock로 이전 예정).
+
+### BeefySwapper 경로 (Aerodrome 4-field Route, selector `0xcac88ea9`)
+
+| From → To | Router | Pools |
+|-----------|--------|-------|
+| AERO → WETH | Aerodrome Router | AERO/WETH volatile |
+| AERO → USDC | Aerodrome Router | AERO/USDC volatile |
+| AERO → DAI  | Aerodrome Router | AERO/USDC volatile → DAI/USDC stable (multi-hop) |
+
+모든 경로: `amountIndex=4`, `minIndex=36`, `minAmountSign=0`.
+
+### BeefySwapper slippage 보정 (중요 인프라 수정)
+
+| 항목 | 값 |
+|------|------|
+| 기존 slippage | `0.095e18` |
+| 공식 실측 | `minAmountOut = expected × slippage / 1 ether` ([BeefySwapper.sol:165](https://github.com/…)) |
+| 해석 | 0.095 = "최소 출력 = 기대치의 9.5%만 보장" = 90.5% 슬리피지 허용 (치명적 위험) |
+| 수정 slippage | `0.99e18` (1% 슬리피지만 허용, DEX 표준) |
+| tx | `0x65e6a23f7fba4ad22ddbc6b01cc48fc1823e6b4d7d73db118ad23333b1eeb129` |
+
+### Next Steps (complete)
+
+- [x] Deploy Beefy vault strategy for Aerodrome LP pools (StrategyVelodromeGaugeV2) — WETH/USDC + DAI/USDC
+- [x] Register Aerodrome pools in BeefyOracle — FixedOracle fallback 사용
+- [x] Configure BeefySwapper with Aerodrome Router — AERO→WETH/USDC/DAI
+- [x] BeefySwapper slippage 위험값 보정 (0.095 → 0.99)
+
+### 후속 과제 (PROD 전환 전)
+
+- [ ] Strategy ownership을 StratTimelock (`0xAD87…EBB51`) 로 이전
+- [ ] Oracle sub-oracle을 FixedOracle → BeefyOracleSolidly로 전환 (Aerodrome pool observations 성숙 후)
+- [ ] AERO 실거래 가격 반영
+- [ ] Harvester bot (Cowllector) 설정값 주입: Strategy 주소 2개, HARVESTER_PK, vault config JSON
+- [ ] haetae-finance-api 의 `/vaults/giwa_testnet`, `/apy`, `/tvl` 엔드포인트에 새 Vault 2개 반영 (BE-05 vault config)
+- [ ] haetae FE(`src/config`) 에 Vault 2개 등록
