@@ -40,9 +40,14 @@ Deployed: 2026-03 (prior to Aerodrome)
 | USDC  | $1.0   | stable anchor |
 | DAI   | $1.0   | stable anchor |
 | WETH  | $3000  | testnet placeholder |
-| AERO  | $0.1   | testnet placeholder |
+| AERO  | $0.0045 | AMM 실거래 가격 반영 (2026-04-15, issue #13 해결) |
 
 BeefyOracle staleness = 21600s (6h).
+
+AERO 가격 이력:
+- 초기 배포 (2026-04-13): `$0.1` placeholder
+- **수정 (2026-04-15)**: `$0.0045` — AMM 실거래 가격(~$0.005~$0.006) 반영하여 harvest SwapFailed 해소
+  - tx: `0x54c8a7d203a8d0415e4c9c4457eff12c159cb5f6958ab2ffffbabad334c1a253`
 
 ### Vault — WETH/USDC (Aerodrome volatile)
 
@@ -94,18 +99,36 @@ Vault 2개 모두 `owner = Vault Timelock (0x0F3A…1BD0)`. Strategy는 `owner =
 | 수정 slippage | `0.99e18` (1% 슬리피지만 허용, DEX 표준) |
 | tx | `0x65e6a23f7fba4ad22ddbc6b01cc48fc1823e6b4d7d73db118ad23333b1eeb129` |
 
+### Harvest SwapFailed 해결 (2026-04-15, issue #13)
+
+Cowllector harvest가 `SwapFailed` revert로 2개 Strategy 모두 실패하던 문제 해결.
+
+**원인:**
+1. FixedOracle AERO 가격 `$0.1` ↔ AMM 실거래 `~$0.005~$0.006` → 20배 괴리
+2. BeefySwapper slippage `0.99e18`로 교정된 후 `minAmountOut = amountIn × 0.99 × OraclePrice / targetOraclePrice`가 실제 AMM 출력의 **20배 요구** → revert 100%
+3. 동시에 AERO/WETH pool (0.022 WETH / 11,000 AERO), AERO/USDC pool (5 USDC / 1,000 AERO) 유동성이 지나치게 얇아 1,732 AERO harvest swap 시 price impact로도 fail
+
+**조치:**
+- Oracle AERO 가격: `$0.1` → `$0.0045` — tx `0x54c8a7d2…c1a253`
+- AERO/WETH pool 시딩: +25,000 AERO + 0.05 WETH → 총 36,000 AERO / 0.072 WETH — tx `0x400dd4ae…fb0e11fb`
+- AERO/USDC pool 시딩: +200,000 AERO + 1,000 USDC → 총 201,000 AERO / 1,005 USDC — tx `0xf31d50f2…5df6ca7`
+- harvest 실행 검증: WETH/USDC tx `0x159ee0e6…c2da6329`, DAI/USDC tx `0x3298ae38…61ff211b` (status=1, `lastHarvest` 갱신 확인)
+
+스크립트: `haetae-dev/haetae-finance-contracts` (local beefy-contracts fork) `scripts/manage/giwa/update-aero-price.ts`, `scripts/manage/giwa/seed-aero-pools.ts`
+
 ### Next Steps (complete)
 
 - [x] Deploy Beefy vault strategy for Aerodrome LP pools (StrategyVelodromeGaugeV2) — WETH/USDC + DAI/USDC
 - [x] Register Aerodrome pools in BeefyOracle — FixedOracle fallback 사용
 - [x] Configure BeefySwapper with Aerodrome Router — AERO→WETH/USDC/DAI
 - [x] BeefySwapper slippage 위험값 보정 (0.095 → 0.99)
+- [x] AERO Oracle 가격 AMM 실거래 기준 교정 ($0.1 → $0.0045) — issue #13
 
 ### 후속 과제 (PROD 전환 전)
 
 - [ ] Strategy ownership을 StratTimelock (`0xAD87…EBB51`) 로 이전
 - [ ] Oracle sub-oracle을 FixedOracle → BeefyOracleSolidly로 전환 (Aerodrome pool observations 성숙 후)
-- [ ] AERO 실거래 가격 반영
+- [ ] FixedOracle AERO 가격 주기적 동기화 cron/hook (pool AMM 변동 시 재발 방지)
 - [ ] Harvester bot (Cowllector) 설정값 주입: Strategy 주소 2개, HARVESTER_PK, vault config JSON
 - [ ] haetae-finance-api 의 `/vaults/giwa_testnet`, `/apy`, `/tvl` 엔드포인트에 새 Vault 2개 반영 (BE-05 vault config)
 - [ ] haetae FE(`src/config`) 에 Vault 2개 등록
