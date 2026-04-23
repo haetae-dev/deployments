@@ -10,6 +10,7 @@ Deployed: 2026-04 (confirmed on-chain and from local deployment artifacts)
 | Vault Factory                                   | `0x51E4561Dd264ee2DF47490acbf80BB2735A4bB37` |
 | Multicall (Beefy)                               | `0xb3F76b75623A859eeC180E33b0f886B19C72bA51` |
 | BeefyV2AppMulticall                             | `0xb174A2816929ab5B7a126A7Ea424B65Df438b24B` |
+| BeefyPriceMulticall                             | `0xAF9a48f499b85d9aa2509AFb9aF50A0b26D06e48` |
 | BeefyFeeConfig (proxy)                          | `0xCB6C3B45A0557e36E3C432481dA29b32db930E19` |
 | BeefyOracle                                     | `0xf9364d8d5D0ee34a1c1Acf2c40B9bc212aF3D70F` |
 | FixedOracle                                     | `0x970317143394a34Bc7ff1d80a44a32eA5E89a1EA` |
@@ -17,9 +18,13 @@ Deployed: 2026-04 (confirmed on-chain and from local deployment artifacts)
 | Zap                                             | `0xc0fA3412Fd58F5C0CD20588438438bB4f981644b` |
 | Deployer/Keeper (historical deployment account) | `0x5D2cd3e72fb4b08C80D729feE66dA4755E071147` |
 
-> **Multicall (Beefy)** — `contracts/BIFI/utils/Multicall.sol` (generic aggregate). Beefy address-book(`beefyfinance.ts`)의 `multicall` 필드 대상. 2026-04-23 배포(tx `0x4ab9d67a4bb8a090cac8f0e4b79e7c032f5335e0e58ffeb43f814899d9a72a91`).
+> **Multicall (Beefy)** — `contracts/BIFI/utils/Multicall.sol` (generic aggregate). Beefy address-book(`beefyfinance.ts`)의 `multicall` 필드 대상. 2026-04-23 배포(tx `0x4ab9d67a4bb8a090cac8f0e4b79e7c032f5335e0e58ffeb43f814899d9a72a91`). Bytecode ~1.6KB.
 >
-> **BeefyV2AppMulticall** — `contracts/BIFI/infra/BeefyV2AppMulticall.sol`. Beefy API `fetchAmmPrices.ts`의 `MULTICALLS` 맵 대상(volatile LP 가격 산출). 2026-04-23 배포.
+> **BeefyV2AppMulticall** — `contracts/BIFI/infra/BeefyV2AppMulticall.sol`. Beefy **App frontend**가 vault 정보(TVL/APY/balance)를 일괄 조회하기 위한 멀티콜 헬퍼. 2026-04-23 배포. Bytecode ~8.6KB.
+>
+> **BeefyPriceMulticall** — `contracts/BIFI/infra/BeefyPriceMulticall.sol`. Beefy **API** `fetchAmmPrices.ts`의 `MULTICALLS` 맵 대상(`getLpInfo(address[][])`로 volatile LP의 `totalSupply`·`token0/token1 balanceOf` 일괄 조회 → LP 단가 산출). 2026-04-23 배포(tx `0x91c62cc99e45f1e29236202eb3822f1acf190c2205417e241a8a91bed9935e50`). Bytecode ~1.4KB. Giwa 선례: `0x1a7f8ee57F9CfB1C1f7940e736e352E01DbA6a29`.
+>
+> ⚠️ `BeefyV2AppMulticall`과 `BeefyPriceMulticall`은 이름이 비슷하지만 **서로 다른 컨트랙트**다. API가 요구하는 것은 `getLpInfo` selector를 갖는 `BeefyPriceMulticall`이며, AppMulticall은 해당 selector가 없어 API에서 사용할 수 없다.
 
 ## Aerodrome vaults deployed
 
